@@ -74,6 +74,7 @@
       show('login'); banner([`ติดต่อเซิร์ฟเวอร์ไม่ได้: ${e.message} `, h('button', { class: 'linkbtn', type: 'button', onclick: () => { banner(''); route(); } }, 'ลองใหม่')], 'err'); return;
     }
     banner('');
+    if (me && me.needsLogin) { await sb.auth.signOut().catch(() => {}); show('login'); say('mAuth', 'เซสชันหมดอายุ — เข้าสู่ระบบใหม่', 'err'); return; }
     const email = (me && me.email) || session.user.email || '';
     $('who').textContent = email;
     if (me && me.admin) return enterApp();
@@ -126,7 +127,7 @@
     const code = $('code').value.trim(); if (!code) { say('mClaim', 'ใส่รหัสตั้งค่าก่อน', 'err'); return; }
     const b = $('bClaim'); b.disabled = true; say('mClaim', 'กำลังยืนยัน…');
     try { await rawApi('claim', { setupCode: code }); $('code').value = ''; say('mClaim', '✓ ยืนยันแล้ว', 'ok'); await route(); }
-    catch (e) { say('mClaim', e.status === 401 || e.status === 403 ? 'รหัสตั้งค่าไม่ถูกต้อง' : e.message, 'err'); }
+    catch (e) { say('mClaim', e.status === 403 ? 'รหัสตั้งค่าไม่ถูกต้อง' : e.message, 'err'); if (e.status === 401) setTimeout(route, 1200); }
     finally { b.disabled = false; }
   };
   $('code').addEventListener('keydown', e => { if (e.key === 'Enter') $('bClaim').click(); });
@@ -264,7 +265,7 @@
   // ---------------------------------------------------------------- styles
   const sf = s => ({ id: s.id, title: s.title || s.id, category: s.category || '', published: s.published !== false,
     sort: +(s.sort_order ?? s.sortOrder ?? 0) || 0, updated: s.updated_at ?? s.updatedAt ?? s.updated ?? null,
-    files: Array.isArray(s.files) ? s.files.length : null, tr: !!(s.has_transcript ?? s.hasTranscript ?? (s.hasData && s.hasData.transcript)),
+    files: Array.isArray(s.files) ? s.files.length : (Number.isFinite(+s.fileCount) ? +s.fileCount : null), tr: !!(s.has_transcript ?? s.hasTranscript ?? (s.hasData && s.hasData.transcript)),
     bt: !!(s.has_beats ?? s.hasBeats ?? (s.hasData && s.hasData.beats)), thumb: s.thumb || pubUrl(s.id, 'thumb.jpg'), duration: s.duration });
   const sortStyles = () => STYLES.sort((a, b) => a.sort - b.sort || String(a.title).localeCompare(String(b.title), 'th'));
   async function loadStyles() {
@@ -279,7 +280,7 @@
       h('tr', null, ['', 'สไตล์', 'แสดง', 'ลำดับ', 'ข้อมูล', 'อัปเดต', ''].map(t => h('th', null, t))),
       ...STYLES.map(s => {
         const img = h('img', { class: 'thumbs', src: s.thumb, alt: '', loading: 'lazy' }); img.onerror = () => { img.removeAttribute('src'); };
-        const sw = h('button', { class: 'sw' + (s.published ? ' on' : ''), type: 'button', role: 'switch', 'aria-checked': s.published ? 'true' : 'false', title: s.published ? 'ซ่อนจากหน้าคลัง' : 'แสดงในหน้าคลัง' });
+        const sw = h('button', { class: 'sw' + (s.published ? ' on' : ''), type: 'button', role: 'switch', 'aria-checked': s.published ? 'true' : 'false', title: s.published ? 'ซ่อนจากหน้าคลัง (ภาพปก/คลิปตัวอย่างยังเปิดได้ถ้ามีลิงก์ตรง)' : 'แสดงในหน้าคลัง' });
         sw.onclick = async () => {
           sw.disabled = true;
           try { await api('styles', { action: 'publish', id: s.id, published: !s.published }); s.published = !s.published; toast(s.published ? 'แสดงในหน้าคลังแล้ว' : 'ซ่อนจากหน้าคลังแล้ว'); renderStyles(); }
@@ -363,11 +364,13 @@
     const big = entries.filter(e => e.file.size > MAX_BYTES);
     if (big.length) throw new Error('ไฟล์ใหญ่เกิน 50 MB: ' + big.map(e => `${e.rel} (${mb(e.file.size)})`).join(', ') + ' — ย่อก่อน (เช่น ffmpeg -i ref.mp4 -vf scale=-2:1280 -crf 28 ref_small.mp4 แล้วเปลี่ยนชื่อเป็น ref.mp4) หรือใช้เครื่องมืออัปโหลดในเครื่อง');
     const refN = pack.ref_video || 'ref.mp4', thN = pack.thumb || 'thumb.jpg', shN = pack.sheet || 'sheet.jpg';
-    // private bucket: every pack file except the preview video/thumb · public bucket: thumb.jpg, ref.mp4, sheet.jpg (canonical names)
-    const jobs = entries.filter(e => e.rel !== refN && e.rel !== thN).map(e => ({ bucket: 'armory-private', rel: e.rel, file: e.file, sent: 0 }));
-    for (const [src, dst] of [[thN, 'thumb.jpg'], [refN, 'ref.mp4'], [shN, 'sheet.jpg']]) {
+    // same placement as tools/upload_to_cloud.mjs: armory-private = every pack file · armory-public = thumb / ref video / sheet (same names, for the gallery)
+    const jobs = entries.map(e => ({ bucket: 'armory-private', rel: e.rel, file: e.file, sent: 0 }));
+    for (const [src, what] of [[thN, 'การ์ดจะไม่มีภาพปก'], [refN, 'การ์ดจะไม่มีคลิปตัวอย่าง'], [shN, 'ไม่มีภาพรวมทั้งคลิป']]) {
       const e = entries.find(x => x.rel === src);
-      if (e) jobs.push({ bucket: 'armory-public', rel: dst, file: e.file, sent: 0 }); else log(`! ${id}: ไม่มี ${src} — ${dst === 'thumb.jpg' ? 'การ์ดจะไม่มีภาพปก' : dst === 'ref.mp4' ? 'การ์ดจะไม่มีคลิปตัวอย่าง' : 'ไม่มีภาพรวมทั้งคลิป'}`, 'err');
+      if (!e) { log(`! ${id}: ไม่มี ${src} — ${what}`, 'err'); continue; }
+      if (src.includes('/')) { log(`! ${id}: ${src} อยู่ในโฟลเดอร์ย่อย — ไฟล์ตัวอย่างหน้าเว็บต้องอยู่ชั้นนอกสุดของแพ็ค`, 'err'); continue; }
+      jobs.push({ bucket: 'armory-public', rel: src, file: e.file, sent: 0 });
     }
     const total = jobs.reduce((a, j) => a + j.file.size, 0) || 1;
     let done = 0, raf = 0;
@@ -446,16 +449,18 @@
   const U_TITLES = { byKey: 'ตามนักเรียน (คีย์)', perKey: 'ตามนักเรียน (คีย์)', keys: 'ตามนักเรียน (คีย์)', by_key: 'ตามนักเรียน (คีย์)',
     byTool: 'ตามเครื่องมือ', perTool: 'ตามเครื่องมือ', tools: 'ตามเครื่องมือ', by_tool: 'ตามเครื่องมือ',
     byStyle: 'ตามสไตล์', perStyle: 'ตามสไตล์', styles: 'ตามสไตล์', by_style: 'ตามสไตล์',
-    byDay: 'รายวัน', daily: 'รายวัน', days_list: 'รายวัน', by_day: 'รายวัน', recent: 'ล่าสุด', rows: 'รายการ' };
-  const U_COLS = { key: 'คีย์', key_id: 'นักเรียน', keyId: 'นักเรียน', name: 'นักเรียน', tool: 'เครื่องมือ', style_id: 'สไตล์', styleId: 'สไตล์', style: 'สไตล์',
+    byDay: 'รายวัน', daily: 'รายวัน', days_list: 'รายวัน', by_day: 'รายวัน', recent: 'ล่าสุด', rows: 'รายละเอียด (นักเรียน × เครื่องมือ × สไตล์)' };
+  const U_ORDER = ['byKey', 'perKey', 'by_key', 'byTool', 'perTool', 'by_tool', 'byStyle', 'perStyle', 'by_style', 'byDay', 'daily', 'by_day', 'recent', 'rows'];
+  const U_COLS = { key: 'คีย์', key_id: 'นักเรียน', keyId: 'นักเรียน', name: 'นักเรียน', key_name: 'นักเรียน', tool: 'เครื่องมือ', style_id: 'สไตล์', styleId: 'สไตล์', style: 'สไตล์',
     count: 'ครั้ง', calls: 'ครั้ง', n: 'ครั้ง', uses: 'ครั้ง', total: 'ครั้ง', day: 'วัน', date: 'วัน', at: 'เวลา', last_at: 'ล่าสุด', lastAt: 'ล่าสุด', last: 'ล่าสุด', first_at: 'ครั้งแรก' };
   const U_SCALARS = { total: 'รวม', days: 'ช่วง (วัน)', since: 'ตั้งแต่', keys_active: 'คีย์ที่ใช้งาน', active_keys: 'คีย์ที่ใช้งาน' };
   const isTimeCol = c => /(^at$|_at$|At$|^last$|^since$)/.test(c);
   const keyName = id => { const k = KEYS.find(x => x.id === id || x.key === id); return k ? (k.name || k.key) : null; };
   function cellVal(col, v, row) {
-    if (v == null || v === '') return '-';
+    if ((col === 'name' || col === 'key_name') && row && (row.key_id || row.keyId) && keyName(row.key_id || row.keyId)) return keyName(row.key_id || row.keyId);
+    if (v == null || v === '') return (col === 'name' || col === 'key_name') ? 'คีย์ที่ถูกลบแล้ว' : '-';
     if ((col === 'key_id' || col === 'keyId') && keyName(v)) return keyName(v);
-    if (col === 'key_id' || col === 'keyId') return row && row.name ? row.name : String(v).slice(0, 8) + '…';
+    if (col === 'key_id' || col === 'keyId') return row && (row.name || row.key_name) ? (row.name || row.key_name) : String(v).slice(0, 8) + '…';
     if (isTimeCol(col)) return fdate(v, true);
     if (typeof v === 'number') return v.toLocaleString('th-TH');
     if (typeof v === 'object') return JSON.stringify(v);
@@ -473,14 +478,15 @@
     const table = (title, cols, rows) => out.push(h('div', { style: 'margin-top:16px' }, h('h3', { style: 'font:700 16px Anuphan;margin:0 0 6px' }, title),
       h('div', { class: 'tw' }, h('table', { style: 'min-width:0' }, h('tr', null, cols.map(c => h('th', null, U_COLS[c] || c))), rows.map(r => h('tr', null, cols.map(c => h('td', null, cellVal(c, r[c], r)))))))));
     const countOf = r => +(r.count ?? r.calls ?? r.n ?? r.uses ?? r.total ?? 0) || 0;
+    const rank = k => { const i = U_ORDER.indexOf(k); return i < 0 ? 50 : i; };
     const walk = (obj, prefix) => {
-      for (const [k, v] of Object.entries(obj || {})) {
+      for (const [k, v] of Object.entries(obj || {}).sort((a, b) => rank(a[0]) - rank(b[0]))) {
         const title = U_TITLES[k] || (prefix ? prefix + ' · ' : '') + k;
         if (Array.isArray(v)) {
           const rows = v.filter(r => r && typeof r === 'object' && !Array.isArray(r));
           if (!rows.length) { if (!v.length) out.push(h('div', { class: 'muted', style: 'margin-top:12px' }, title + ': ยังไม่มีข้อมูล')); continue; }
           let cols = [...new Set(rows.flatMap(r => Object.keys(r)))];
-          if (cols.includes('name') && (cols.includes('key_id') || cols.includes('keyId'))) cols = cols.filter(c => c !== 'key_id' && c !== 'keyId');
+          if ((cols.includes('name') || cols.includes('key_name')) && (cols.includes('key_id') || cols.includes('keyId'))) cols = cols.filter(c => c !== 'key_id' && c !== 'keyId');
           cols = cols.filter(c => c !== 'id').slice(0, 7);
           table(title, cols, rows.slice().sort((a, b) => countOf(b) - countOf(a)));
         } else if (v && typeof v === 'object') {
@@ -504,10 +510,10 @@
     const fn = FN_BASE || 'https://<ref>.supabase.co/functions/v1';
     $('gGallery').textContent = pageUrl('./'); $('gConn').textContent = pageUrl('connect.html'); $('gMcp').textContent = mcpUrl('');
     $('gConnect').setAttribute('href', 'connect.html');
-    const c1 = `curl -X POST "${fn}/armory-api/admin/keys" \\\n  -H "x-admin-token: <โทเคนแอดมิน>" \\\n  -H "Content-Type: application/json" \\\n  -d '{"action":"create","name":"ชื่อนักเรียน / เลขออเดอร์","note":"จากเว็บคอร์ส"}'`;
+    const c1 = `curl -X POST "${fn}/armory-api/admin/keys" \\\n  -H "x-admin-token: <โทเคนเว็บคอร์ส>" \\\n  -H "Content-Type: application/json" \\\n  -d '{"action":"create","name":"ชื่อนักเรียน / เลขออเดอร์","note":"จากเว็บคอร์ส"}'`;
     $('gCurl1').textContent = c1;
-    $('gCurl2').textContent = `curl -X POST "${fn}/armory-api/admin/keys" \\\n  -H "x-admin-token: <โทเคนแอดมิน>" \\\n  -H "Content-Type: application/json" \\\n  -d '{"action":"update","id":"<id ของคีย์>","active":false}'`;
-    $('gCurl3').textContent = `curl "${fn}/armory-api/admin/keys" \\\n  -H "x-admin-token: <โทเคนแอดมิน>"`;
+    $('gCurl2').textContent = `curl -X POST "${fn}/armory-api/admin/keys" \\\n  -H "x-admin-token: <โทเคนเว็บคอร์ส>" \\\n  -H "Content-Type: application/json" \\\n  -d '{"action":"update","id":"<id ของคีย์>","active":false}'`;
+    $('gCurl3').textContent = `curl "${fn}/armory-api/admin/keys" \\\n  -H "x-admin-token: <โทเคนเว็บคอร์ส>"`;
     $('gCp1').onclick = () => copy(c1, 'คัดลอกคำสั่งแล้ว');
   }
 

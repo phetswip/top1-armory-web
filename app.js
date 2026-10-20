@@ -66,8 +66,8 @@ async function checkKey(k) {
   try { return await getJSON(apiUrl('public/key-check'), { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ key: k }) }); }
   catch (e) { return { ok: false, reason: e.status === 429 ? 'rate' : e.status === 0 ? 'network' : 'error' }; }
 }
-const keyReason = r => ({ config: 'เว็บยังไม่ได้ตั้งค่าเชื่อมเซิร์ฟเวอร์ (config.js)', rate: 'ลองถี่เกินไป รอสักครู่แล้วลองใหม่', network: 'เชื่อมต่อเซิร์ฟเวอร์ไม่ได้ — เช็กอินเทอร์เน็ตแล้วลองใหม่',
-  expired: 'คีย์นี้หมดอายุแล้ว — ติดต่อทีมงาน TOP 1 HollyWood', inactive: 'คีย์นี้ถูกปิดใช้งาน — ติดต่อทีมงาน TOP 1 HollyWood', revoked: 'คีย์นี้ถูกปิดใช้งาน — ติดต่อทีมงาน TOP 1 HollyWood' }[r && r.reason] || 'คีย์ไม่ถูกต้อง หรือถูกยกเลิกแล้ว');
+const keyReason = r => (r && r.ok === false && typeof r.message === 'string' && r.message && !['config', 'rate', 'network', 'error'].includes(r.reason)) ? r.message : ({ config: 'เว็บยังไม่ได้ตั้งค่าเชื่อมเซิร์ฟเวอร์ (config.js)', rate: 'ลองถี่เกินไป รอสักครู่แล้วลองใหม่', network: 'เชื่อมต่อเซิร์ฟเวอร์ไม่ได้ — เช็กอินเทอร์เน็ตแล้วลองใหม่',
+  missing: 'ใส่คีย์ก่อน', expired: 'คีย์นี้หมดอายุแล้ว — ติดต่อทีมงาน TOP 1 HollyWood', inactive: 'คีย์นี้ถูกปิดใช้งาน — ติดต่อทีมงาน TOP 1 HollyWood', revoked: 'คีย์นี้ถูกปิดใช้งาน — ติดต่อทีมงาน TOP 1 HollyWood' }[r && r.reason] || 'คีย์ไม่ถูกต้อง หรือถูกยกเลิกแล้ว');
 
 // ---------- the ready-made message a student sends to Claude
 const promptFor = s => `ใช้คลังแสง TOP 1 ทำโฆษณาแบบสไตล์ ${s.id} ให้แบรนด์ฉัน\n(สไตล์: ${s.title || s.id})\n` +
@@ -82,24 +82,30 @@ function openMake(s) {
   let m = document.getElementById('mk');
   if (!m) { m = h('div', { id: 'mk', class: 'modal', role: 'dialog', 'aria-modal': 'true', 'aria-label': 'ทำคอนเทนต์แบบนี้' }); m.addEventListener('click', e => { if (e.target === m) closeMake(); }); document.body.appendChild(m); }
   const pr = promptFor(s);
-  let key = LS.k;
-  const kin = h('input', { type: 'text', id: 'kk', placeholder: 'วางคีย์ที่ได้จากคอร์ส เช่น T1-XXXX-XXXX-XXXX', value: key, autocomplete: 'off', spellcheck: 'false', autocapitalize: 'characters' });
-  const kmsg = h('div', { class: 'muted', id: 'km' }, key ? 'ใช้คีย์ที่บันทึกไว้ในเครื่องนี้ (กดยืนยันเพื่อตรวจอีกครั้ง)' : 'คีย์ได้จากคอร์ส TOP 1 HollyWood — 1 คน 1 คีย์ ห้ามแชร์');
-  const cu = h('div', { class: 'code', id: 'cu' }, mcpUrl(key));
-  const cc = h('div', { class: 'code', id: 'cc' }, cliCmd(mcpUrl(key)));
-  const needKey = () => { if (!LS.k) { toast('ใส่คีย์แล้วกดยืนยันก่อน'); kin.focus(); return true; } return false; };
+  // `key` = the key the server accepted in THIS dialog (empty until verified) — the only key that reaches the link / copy buttons
+  let key = '';
+  const saved = LS.k;
+  const kin = h('input', { type: 'text', id: 'kk', placeholder: 'วางคีย์ที่ได้จากคอร์ส เช่น T1-XXXX-XXXX-XXXX', value: saved, autocomplete: 'off', spellcheck: 'false', autocapitalize: 'characters' });
+  const kmsg = h('div', { class: 'muted', id: 'km' }, saved ? 'กำลังตรวจคีย์ที่บันทึกไว้ในเครื่องนี้…' : 'คีย์ได้จากคอร์ส TOP 1 HollyWood — 1 คน 1 คีย์ ห้ามแชร์');
+  const cu = h('div', { class: 'code', id: 'cu' }, mcpUrl(''));
+  const cc = h('div', { class: 'code', id: 'cc' }, cliCmd(mcpUrl('')));
+  const paintUrl = () => { cu.textContent = mcpUrl(key); cc.textContent = cliCmd(mcpUrl(key)); };
+  const needKey = () => { if (!key) { toast('ใส่คีย์แล้วกดยืนยันก่อน'); kin.focus(); return true; } return false; };
   const kbtn = h('button', { class: 'btn sm', id: 'kc', type: 'button' }, 'ยืนยัน');
   const verify = async () => {
     const v = normKey(kin.value); kin.value = v;
+    key = ''; paintUrl();
     if (!v) { kmsg.replaceChildren(h('span', { class: 'err' }, 'ใส่คีย์ก่อน')); return; }
     kbtn.disabled = true; kmsg.replaceChildren('กำลังตรวจคีย์…');
     const r = await checkKey(v); kbtn.disabled = false;
+    if (normKey(kin.value) !== v) return;                          // typed something else meanwhile
     if (r && r.ok) {
-      LS.k = v; key = v; cu.textContent = mcpUrl(v); cc.textContent = cliCmd(mcpUrl(v));
+      LS.k = v; key = v; paintUrl();
       kmsg.replaceChildren(h('span', { class: 'ok' }, '✓ ใช้ได้' + (r.name ? ' — ' + r.name : '')));
     } else kmsg.replaceChildren(h('span', { class: 'err' }, keyReason(r)));
   };
   kbtn.onclick = verify; kin.addEventListener('keydown', e => { if (e.key === 'Enter') verify(); });
+  kin.addEventListener('input', () => { if (key && normKey(kin.value) !== key) { key = ''; paintUrl(); } });
   const lk = h('input', { type: 'checkbox', id: 'lk', checked: LS.linked }); lk.onchange = () => LS.linked = lk.checked;
   const ol = (...items) => h('ol', { class: 'ol', style: 'font-size:14px;line-height:1.7' }, items.map(x => h('li', null, x)));
   m.replaceChildren(h('div', { class: 'sheet' },
@@ -113,8 +119,8 @@ function openMake(s) {
       h('div', { class: 'muted', style: 'margin-top:10px' }, h('b', null, 'Claude Code'), ' — ทำคลิปจริง: เปิด Terminal ในโฟลเดอร์ชุดเริ่มต้น TOP 1 แล้ววางคำสั่งนี้ครั้งเดียว (พิมพ์ /mcp เพื่อตรวจว่าเชื่อมแล้ว · ห้ามส่งคีย์ให้คนอื่น)'),
       cc,
       h('div', { class: 'row' },
-        h('button', { class: 'btn sm ghost', id: 'c1', type: 'button', onclick: () => { if (!needKey()) copy(mcpUrl(LS.k), 'คัดลอกลิงก์แล้ว'); } }, 'คัดลอกลิงก์'),
-        h('button', { class: 'btn sm ghost', id: 'c2', type: 'button', onclick: () => { if (!needKey()) copy(cliCmd(mcpUrl(LS.k)), 'คัดลอกคำสั่งแล้ว'); } }, 'คัดลอกคำสั่ง'),
+        h('button', { class: 'btn sm ghost', id: 'c1', type: 'button', onclick: () => { if (!needKey()) copy(mcpUrl(key), 'คัดลอกลิงก์แล้ว'); } }, 'คัดลอกลิงก์'),
+        h('button', { class: 'btn sm ghost', id: 'c2', type: 'button', onclick: () => { if (!needKey()) copy(cliCmd(mcpUrl(key)), 'คัดลอกคำสั่งแล้ว'); } }, 'คัดลอกคำสั่ง'),
         h('label', { style: 'margin:6px 0 0;display:flex;gap:6px;align-items:center;font-weight:500' }, lk, ' เชื่อมแล้ว'))),
     h('div', { class: 'step' }, h('h3', null, h('span', { class: 'num' }, '3'), 'เริ่มทำ — ส่งข้อความนี้ให้ Claude'),
       h('div', { class: 'code' }, pr),
@@ -126,7 +132,8 @@ function openMake(s) {
       h('a', { class: 'linkbtn', href: 'connect.html' }, 'วิธีเชื่อมแบบละเอียด →'),
       h('button', { class: 'btn ghost sm', id: 'cl', type: 'button', onclick: closeMake }, 'ปิด'))));
   m.classList.add('on');
-  if (!key) setTimeout(() => kin.focus(), 60);
+  if (saved) verify();                                            // re-check the remembered key (it may be revoked / expired now)
+  else setTimeout(() => kin.focus(), 60);
 }
 
 // ---------- badges: difficulty · credits · time (+ what to prepare) → DOM nodes

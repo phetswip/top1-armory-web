@@ -1,11 +1,14 @@
 <!doctype html><html lang="th"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
 <title>หลังบ้าน · คลังแสง TOP 1</title>
 <meta name="robots" content="noindex,nofollow">
+<!-- scripts only from this site (supabase-js is a local copy in vendor/, no CDN) · API/uploads only to Supabase -->
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com data:; img-src 'self' data: blob: https://*.supabase.co; media-src 'self' blob: https://*.supabase.co; connect-src 'self' https://*.supabase.co wss://*.supabase.co; object-src 'none'; base-uri 'self'; form-action 'self'; frame-src 'none'">
+<meta name="referrer" content="no-referrer">
 <link rel="icon" href="data:,">
 <link href="https://fonts.googleapis.com/css2?family=Anuphan:wght@200..700&family=Inter:wght@300..800&display=swap" rel="stylesheet"><link rel="stylesheet" href="app.css"></head><body>
 <div class="page-bg"></div>
 <div class="top glass"><div class="in"><a class="brand" href="./"><b>TOP 1</b> HOLLYWOOD<small>หลังบ้านคลังแสง</small></a><div class="sp"></div>
- <span class="who" id="who"></span><button class="btn ghost sm" id="logout" type="button" hidden>ออกจากระบบ</button><a class="btn ghost sm" href="./">ดูหน้าลูกค้า</a></div></div>
+ <span class="who" id="who"></span><button class="btn ghost sm" id="logout" type="button" hidden>ออกจากระบบ</button><a class="btn ghost sm hide-xs" href="./">ดูหน้าลูกค้า</a></div></div>
 <div class="wrap">
  <div id="banner"></div>
 
@@ -103,7 +106,7 @@
      <li><b>นักเรียนเชื่อมเอง</b> — นักเรียนเปิดหน้า <a class="linkbtn" id="gConnect" href="connect.html" target="_blank" rel="noopener">connect.html</a> ใส่คีย์ แล้วทำตาม 3 ขั้น (claude.ai หรือ Claude Code)</li>
      <li><b>ระงับคีย์</b> — ปิดสวิตช์ (เปิดคืนได้) · <b>ลบ</b> = ลบถาวร · ตั้งวันหมดอายุได้ที่ปุ่ม แก้ไข</li>
      <li><b>เพิ่มสไตล์</b> — แท็บ “สไตล์” → เลือกโฟลเดอร์แพ็ค (pack.json, ref.mp4, thumb.jpg, sheet.jpg, frames/, playbook.md, beats.json, transcript.json, audio.json, template/, examples/) → รอจนขึ้น ✓ · ไฟล์เกิน 50 MB ต้องย่อก่อน หรือใช้เครื่องมืออัปโหลดในเครื่อง</li>
-     <li><b>ซ่อน/เรียงสไตล์</b> — สวิตช์ซ่อนจากหน้าคลังทันที (ไฟล์ยังอยู่) · ช่องลำดับ: เลขน้อยขึ้นก่อน</li>
+     <li><b>ซ่อน/เรียงสไตล์</b> — สวิตช์ซ่อนจากหน้าคลังและจาก Claude ทันที · <b>แต่ภาพปก คลิปตัวอย่าง (ref.mp4) และภาพตารางยังเปิดได้ถ้ามีลิงก์ตรง</b> — สไตล์ที่ยังเป็นความลับห้ามอัปขึ้น หรือกดลบแทนการซ่อน · ช่องลำดับ: เลขน้อยขึ้นก่อน</li>
      <li><b>ดูการใช้งาน</b> — แท็บ “การใช้งาน” ดูว่าใคร ใช้เครื่องมือไหน กับสไตล์ไหน กี่ครั้ง</li>
     </ol>
    </div>
@@ -113,7 +116,7 @@
     <div class="muted">ลิงก์ MCP ของนักเรียน (แต่ละคนใช้คีย์ตัวเอง)</div><div class="code" id="gMcp"></div>
    </div>
    <div class="panel"><h2>เชื่อมเว็บคอร์ส (ออกคีย์อัตโนมัติเมื่อมีคนจ่ายเงิน)</h2>
-    <div class="muted">ให้เซิร์ฟเวอร์ของเว็บคอร์สเรียก API นี้ด้วยหัว <span class="kbd">x-admin-token</span> — <b>ห้ามใส่โทเคนในหน้าเว็บหรือโค้ดฝั่งเบราว์เซอร์</b> เก็บไว้ฝั่งเซิร์ฟเวอร์เท่านั้น</div>
+    <div class="muted">ให้เซิร์ฟเวอร์ของเว็บคอร์สเรียก API นี้ด้วยหัว <span class="kbd">x-admin-token</span> — ใช้ <b>โทเคนเว็บคอร์ส</b> แยกต่างหาก (scope <span class="kbd">keys</span> = จัดการได้แค่คีย์นักเรียน ทำอะไรกับสไตล์/ไฟล์/แอดมินไม่ได้ · วิธีสร้างอยู่ใน README หัวข้อ 3) <b>ห้ามใช้โทเคนแอดมินตัวหลัก</b> · ห้ามใส่โทเคนในหน้าเว็บหรือโค้ดฝั่งเบราว์เซอร์ เก็บไว้ฝั่งเซิร์ฟเวอร์เท่านั้น</div>
     <label>สร้างคีย์</label><div class="code" id="gCurl1"></div>
     <div class="muted">ตอบกลับ: <span class="kbd">{"key": {"id": "…", "key": "T1-XXXX-XXXX-XXXX", "name": "…", "active": true}}</span></div>
     <label>ปิดคีย์ (เช่น ขอคืนเงิน)</label><div class="code" id="gCurl2"></div>
@@ -124,6 +127,6 @@
  </section>
 </div>
 <script src="config.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.min.js"></script>
+<script src="vendor/supabase.js"></script><!-- @supabase/supabase-js 2.45.4 dist/umd (npm, MIT) — same origin: no third-party script can read the admin session -->
 <script src="app.js"></script><script src="admin.js"></script>
 </body></html>
