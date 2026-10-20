@@ -260,10 +260,10 @@
       if (document.body && document.body.getAttribute('data-auth') === 'required') { A.go('login.html'); return; }
       paintAll(null); toast('ออกจากระบบแล้ว');
     });
-    el.replaceChildren(
+    el.replaceChildren(...[
       page === 'course.html' ? null : h('a', { class: 'btn sm', href: 'course.html' }, 'คอร์สของฉัน'),
       h('span', { class: 'who', title: user.email || '' }, displayName(user)),
-      out);
+      out].filter(Boolean));
   }
   function paintAll(s) { slots.forEach(el => { if (el.isConnected) paintSlot(el, s); else slots.delete(el); }); }
   async function mountNav(slot) {

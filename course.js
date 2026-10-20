@@ -61,7 +61,7 @@
       } catch (err) {
         btn.disabled = false;
         const c = /^(key-inactive|key-expired|key-used|inactive)$/.test(err.reason || '') ? contact() : null;
-        msg.replaceChildren(h('span', { class: 'err' }, err.message), c ? ' ' : null, c);
+        msg.replaceChildren(...[h('span', { class: 'err' }, err.message), c ? ' ' : null, c].filter(Boolean));
       }
     });
     return form;
@@ -187,12 +187,12 @@
       const d = r.value || {};
       const files = (Array.isArray(d.files) ? d.files : Array.isArray(d) ? d : []).filter(f => f && (f.title || f.url));
       if (!files.length) { box.append(h('div', { class: 'muted' }, 'ยังไม่มีไฟล์ — ทีมงานจะเพิ่มให้เร็วๆ นี้')); return; }
-      box.append(h('div', { class: 'muted' }, 'ชุดเริ่มต้นและไฟล์ที่ใช้ในคอร์ส — ดาวน์โหลดแล้วแตกไฟล์ (.zip) ก่อนใช้'),
+      box.append(...[h('div', { class: 'muted' }, 'ชุดเริ่มต้นและไฟล์ที่ใช้ในคอร์ส — ดาวน์โหลดแล้วแตกไฟล์ (.zip) ก่อนใช้'),
         D && D.isMobile() ? h('div', { class: 'banner', style: 'margin:10px 0 0' }, 'ดาวน์โหลดบนคอมพิวเตอร์ — ชุดเริ่มต้นใช้กับแอป Claude บนคอม (ไฟล์ใหญ่ ไม่ต้องโหลดลงมือถือ)') : null,
         h('ul', { class: 'files' }, files.map(f => h('li', null,
           h('div', { class: 'f-t' }, h('b', null, f.title || 'ไฟล์'), f.description ? h('div', { class: 'muted' }, f.description) : null, f.size ? h('span', { class: 'mini' }, U.fmtSize(f.size)) : null),
           isHttps(f.url) ? h('a', { class: 'btn sm ghost', href: f.url, target: '_blank', rel: 'noopener', download: '' }, 'ดาวน์โหลด') : h('span', { class: 'mini' }, 'ลิงก์ยังไม่พร้อม')))),
-        h('div', { class: 'mini', style: 'margin-top:8px' }, 'ลิงก์ดาวน์โหลดใช้ได้ 1 ชั่วโมง — ถ้ากดแล้วไม่ได้ ให้รีเฟรชหน้านี้'));
+        h('div', { class: 'mini', style: 'margin-top:8px' }, 'ลิงก์ดาวน์โหลดใช้ได้ 1 ชั่วโมง — ถ้ากดแล้วไม่ได้ ให้รีเฟรชหน้านี้')].filter(Boolean));
     };
     fill(res);
     return box;
