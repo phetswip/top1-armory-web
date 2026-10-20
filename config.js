@@ -2,5 +2,8 @@
 window.ARMORY = {
   functionsBase: 'https://uhbgslmljsjvkyymintu.supabase.co/functions/v1',
   supabaseUrl: 'https://uhbgslmljsjvkyymintu.supabase.co',
-  supabaseKey: 'sb_publishable_V4-zGMLtsJ6JGnm9Phck4Q_OmabhPO_'
+  supabaseKey: 'sb_publishable_V4-zGMLtsJ6JGnm9Phck4Q_OmabhPO_',
+  // ปุ่มติดต่อทีมงาน: ลิงก์ LINE OA หรือเพจ (https://…) — เว้นว่าง = ไม่แสดงปุ่ม
+  contactUrl: '',
+  contactLabel: 'ทักไลน์ทีมงาน'
 };

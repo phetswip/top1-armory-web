@@ -1,68 +1,39 @@
 <!doctype html><html lang="th"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
-<title>เชื่อม Claude · คลังแสง TOP 1</title>
-<meta name="description" content="เชื่อม Claude ของคุณกับคลังแสงคอนเทนต์ TOP 1 HollyWood ด้วยคีย์นักเรียน">
+<!-- scripts only from this site (no inline scripts, no CDN) · API only to Supabase · videos: storage/https files, YouTube (nocookie), Vimeo -->
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com data:; img-src 'self' data: blob: https:; media-src 'self' blob: https:; frame-src 'self' https://www.youtube-nocookie.com https://player.vimeo.com; connect-src 'self' https://*.supabase.co wss://*.supabase.co; object-src 'none'; base-uri 'self'; form-action 'self'">
+<title>เชื่อมแอป Claude · คลังแสง TOP 1</title>
+<meta name="description" content="ตั้งค่าครั้งเดียว: เชื่อมแอป Claude บนคอมของคุณกับคลังแสงคอนเทนต์ TOP 1 HollyWood">
 <link rel="icon" href="data:,">
-<link href="https://fonts.googleapis.com/css2?family=Anuphan:wght@200..700&family=Inter:wght@300..800&display=swap" rel="stylesheet"><link rel="stylesheet" href="app.css"></head><body>
+<link href="https://fonts.googleapis.com/css2?family=Anuphan:wght@200..700&family=Inter:wght@300..800&display=swap" rel="stylesheet"><link rel="stylesheet" href="app.css"><link rel="stylesheet" href="course.css"></head><body>
 <div class="page-bg"></div>
-<div class="top glass"><div class="in"><a class="brand" href="./"><b>TOP 1</b> HOLLYWOOD<small>คลังแสงคอนเทนต์</small></a><div class="sp"></div><a class="btn ghost sm" href="./#armory">ดูคลังสไตล์</a></div></div>
+<div class="top glass"><div class="in"><a class="brand" href="./"><b>TOP 1</b><span class="hide-xs">&nbsp;HOLLYWOOD</span><small>คลังแสงคอนเทนต์</small></a><div class="sp"></div><div data-account-slot></div><a class="btn ghost sm nav-x" href="./#armory">ดูคลังสไตล์</a></div></div>
 <div class="wrap" style="max-width:860px">
  <div class="hero-s"><span class="pill glass"><i></i>CONNECT CLAUDE</span>
-  <h1>เชื่อม <b class="gb">Claude</b> กับคลังแสง</h1>
-  <p class="muted">ตั้งค่าครั้งเดียวด้วยคีย์นักเรียน แล้ว Claude ของคุณจะเปิดดูทุกสไตล์ในคลังได้ — ดูคลิปตัวอย่างทีละเฟรม ถอดเสียง จับจังหวะ แล้วทำแบบเดียวกันให้แบรนด์คุณ</p></div>
+  <h1>เชื่อม <b class="gb">แอป Claude</b> กับคลังแสง</h1>
+  <p class="muted">ทำครั้งเดียวบนคอมพิวเตอร์ — จากนั้นกด "ทำคอนเทนต์แบบนี้" ที่สไตล์ไหนก็ได้ แอป Claude จะเปิดในโฟลเดอร์ชุดเริ่มต้นของคุณพร้อมคำสั่ง แค่กด Enter</p></div>
  <div id="cfg"></div>
 
- <div class="panel"><h2><span class="num" style="margin-right:8px">1</span>ใส่คีย์นักเรียน</h2>
-  <div class="muted">คีย์ได้จากคอร์ส TOP 1 HollyWood หน้าตาแบบ <span class="kbd">T1-XXXX-XXXX-XXXX</span> — 1 คน 1 คีย์ ห้ามแชร์ให้คนอื่น</div>
-  <div class="row"><input type="text" id="key" placeholder="วางคีย์ของคุณที่นี่" autocomplete="off" spellcheck="false" autocapitalize="characters" style="flex:1;min-width:200px"><button class="btn" id="test" type="button">ทดสอบการเชื่อม</button></div>
-  <div id="msg" class="muted" style="margin-top:8px" aria-live="polite"></div>
-  <div class="row" style="margin-top:4px"><button class="linkbtn" id="forget" type="button">ลบคีย์ออกจากเครื่องนี้</button></div>
+ <div class="panel" id="before"><h2>ก่อนเริ่ม (ครั้งเดียว)</h2>
+  <ol class="ol">
+   <li>ติดตั้ง <b>แอป Claude</b> บนคอม (Mac หรือ Windows) แล้วล็อกอิน — <a class="linkbtn" href="https://claude.ai/download" target="_blank" rel="noopener noreferrer">ดาวน์โหลดแอป Claude</a></li>
+   <li>ดาวน์โหลด <b>ชุดเริ่มต้น</b> จากหน้า <a class="linkbtn" href="course.html#files">คอร์สของฉัน → ไฟล์ประกอบคอร์ส</a> แล้ว<b>แตกไฟล์ .zip</b> (เก็บไว้ที่ Desktop ก็ได้)</li>
+  </ol>
  </div>
 
- <div class="panel"><h2><span class="num" style="margin-right:8px">2</span>ลิงก์เชื่อมต่อของคุณ</h2>
-  <div class="muted">ลิงก์นี้มีคีย์ของคุณอยู่ข้างใน — ใช้กับ Claude ของคุณเท่านั้น</div>
-  <div class="code" id="url"></div>
-  <div class="row"><button class="btn sm ghost" id="cpUrl" type="button">คัดลอกลิงก์</button></div>
- </div>
-
- <div class="grid2">
-  <div class="panel"><h2>claude.ai / แอป Claude</h2>
-   <ol class="ol">
-    <li>เปิด <b>Settings</b> (การตั้งค่า) → <b>Connectors</b></li>
-    <li>กด <b>Add custom connector</b></li>
-    <li>ช่อง Name ใส่ <b>TOP 1 คลังแสง</b></li>
-    <li>ช่อง URL วาง <b>ลิงก์เชื่อมต่อ</b> ด้านบน → กด <b>Add</b></li>
-    <li>ในแชทใหม่ กดปุ่มเครื่องมือ แล้วเปิดใช้ <b>TOP 1 คลังแสง</b></li>
-   </ol>
-   <div class="row"><a class="btn sm ghost" href="https://claude.ai/settings/connectors" target="_blank" rel="noopener">เปิดหน้า Connectors</a></div>
-  </div>
-  <div class="panel"><h2>Claude Code (ทำคลิปจริง)</h2>
-   <ol class="ol">
-    <li>เปิด Terminal ในโฟลเดอร์ <b>ชุดเริ่มต้น TOP 1</b></li>
-    <li>วางคำสั่งนี้ครั้งเดียว แล้วกด Enter</li>
-   </ol>
-   <div class="code" id="cmd"></div>
-   <div class="row"><button class="btn sm ghost" id="cpCmd" type="button">คัดลอกคำสั่ง</button></div>
-   <div class="muted" style="margin-top:8px">เปิด Claude Code แล้วพิมพ์ <span class="kbd">/mcp</span> — ต้องเห็น top1-armory ขึ้นว่าเชื่อมแล้ว</div>
-  </div>
- </div>
-
- <div class="panel"><h2><span class="num" style="margin-right:8px">3</span>ลองสั่ง Claude</h2>
-  <div class="muted">ส่งข้อความนี้ในแชทที่เปิดคลังแสงแล้ว — Claude ควรตอบเป็นรายการสไตล์ในคลัง</div>
-  <div class="code" id="tryMsg">ใช้คลังแสง TOP 1 ดูรายการสไตล์ทั้งหมด (list_styles) แล้วแนะนำ 3 สไตล์ที่เหมาะกับสินค้าของฉัน</div>
-  <div class="row"><button class="btn sm ghost" id="cpTry" type="button">คัดลอกข้อความ</button><a class="btn sm" href="./#armory">เลือกสไตล์ในคลัง →</a></div>
-  <div class="muted" style="margin-top:10px">เจอสไตล์ที่ชอบ กดปุ่ม <b>ทำคอนเทนต์แบบนี้</b> ที่การ์ด จะได้ข้อความสั่งงานพร้อมใช้ของสไตล์นั้น</div>
- </div>
+ <div id="app" aria-live="polite"><div class="panel loading"><span class="spin" aria-hidden="true"></span><span class="muted">กำลังเช็กบัญชีของคุณ…</span></div></div>
 
  <div class="panel"><h2>ติดปัญหา?</h2>
   <ol class="ol">
-   <li><b>คีย์ใช้ไม่ได้</b> — เช็กว่าคัดลอกครบทุกตัว (ไม่มีช่องว่าง) ถ้ายังไม่ได้ ติดต่อทีมงาน TOP 1 HollyWood</li>
-   <li><b>Claude ขอให้ล็อกอิน / กด Connect / ขึ้นว่ายืนยันตัวตนไม่สำเร็จ</b> — แปลว่าคีย์ในลิงก์ผิด ถูกปิด หรือหมดอายุ (คลังแสงไม่มีหน้าล็อกอิน) → กด <b>ทดสอบการเชื่อม</b> ด้านบน แล้วลบ connector เดิมใน Claude และเพิ่มใหม่ด้วยลิงก์ล่าสุด</li>
-   <li><b>Claude ไม่เห็นเครื่องมือ</b> — เช็กว่าเปิดใช้ TOP 1 คลังแสงในแชทนั้นแล้ว หรือลบ connector แล้วเพิ่มใหม่ด้วยลิงก์ล่าสุด</li>
-   <li><b>เปลี่ยนเครื่อง</b> — ใช้คีย์เดิมได้ แค่ทำขั้นตอนเชื่อมอีกครั้ง</li>
+   <li><b>กดแล้วแอปไม่เปิด</b> — ติดตั้งหรืออัปเดตแอป Claude แล้วลองใหม่ · ถ้าเบราว์เซอร์ถามว่าจะเปิดแอป Claude ไหม ให้กด "เปิด" · หรือกด "คัดลอกข้อความ" แล้ววางเองในแอป (แท็บ Code → เลือกโฟลเดอร์ชุดเริ่มต้น)</li>
+   <li><b>แอปเปิดผิดโฟลเดอร์ / หาไฟล์ไม่เจอ</b> — วางที่อยู่โฟลเดอร์ใหม่ (ต้องเป็นโฟลเดอร์ที่แตกไฟล์แล้ว ข้างในมี CLAUDE.md) แล้วกดเชื่อมอีกครั้ง</li>
+   <li><b>Claude บอกว่ายังไม่เห็นเครื่องมือคลังแสง</b> — ปิดแชทนั้น แล้วเริ่มแชทใหม่ (แชทใหม่ถึงจะโหลดเครื่องมือ) · ถ้าแอปขึ้นปุ่มให้ลงชื่อเข้าใช้ (Authenticate) ของ top1-armory <b>ห้ามกด</b> — แปลว่าคีย์ใช้ไม่ได้ ให้กด "ทดสอบคีย์" · ถ้ายังไม่ได้ กดเชื่อมคลังแสงอีกครั้ง</li>
+   <li><b>คีย์ใช้ไม่ได้</b> — กด "ทดสอบคีย์" ถ้าขึ้นว่าหมดอายุหรือถูกปิด ติดต่อทีมงาน TOP 1 HollyWood<span data-contact></span></li>
+   <li><b>เปลี่ยนคอม / ย้ายโฟลเดอร์</b> — ทำหน้านี้ใหม่อีกครั้ง ใช้คีย์เดิมได้</li>
    <li><b>ห้ามแชร์คีย์</b> — ระบบบันทึกการใช้งานของแต่ละคีย์ คีย์ที่ถูกแชร์อาจถูกปิด</li>
   </ol>
  </div>
 </div>
-<footer>TOP 1 HOLLYWOOD · คลังแสงคอนเทนต์ · <a href="./" style="color:var(--sub)">หน้าคลัง</a></footer>
-<script src="config.js"></script><script src="app.js"></script><script src="connect.js"></script>
+<footer>TOP 1 HOLLYWOOD · คลังแสงคอนเทนต์ · <a href="./" style="color:var(--sub)">หน้าคลัง</a> · <a href="course.html" style="color:var(--sub)">คอร์สของฉัน</a></footer>
+<script src="config.js"></script><script src="vendor/supabase.js"></script><!-- supabase-js 2.45.4 UMD, same-origin copy -->
+<script src="app.js"></script><script src="account.js"></script><script src="desktop.js"></script><script src="connect.js"></script>
 </body></html>

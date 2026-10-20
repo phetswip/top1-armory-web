@@ -191,3 +191,4 @@ input[type=email]:focus,input[type=date]:focus,input[type=number]:focus,input[ty
 @media(max-width:720px){.wrap{padding:88px 16px 60px}.panel{padding:18px;border-radius:22px}.sheet{padding:20px;border-radius:24px}.tabs{display:flex}.who{display:none}}
 [hidden]{display:none!important}
 @media(max-width:430px){.hide-xs{display:none!important}}
+@media(max-width:1000px){.hide-m{display:none!important}}   /* tablets (iPad portrait): the long nav links give way to the account buttons */

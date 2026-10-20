@@ -1,7 +1,9 @@
 // admin.js — owner back office for คลังแสง TOP 1 (static page on GitHub Pages)
 // Auth: Supabase email+password (supabase-js UMD) → access token sent as Bearer to {functionsBase}/armory-api/admin/*
 //       (or, as a fallback, the admin token in header x-admin-token, kept in sessionStorage for this tab only).
-// Tabs: คีย์นักเรียน · สไตล์ (incl. pack-folder upload: sign-upload → PUT to signed URL → register) · การใช้งาน · วิธีใช้
+// Tabs: คีย์นักเรียน (+ which course account each key is bound to) · สไตล์ (incl. pack-folder upload: sign-upload → PUT to signed URL → register)
+//       · การใช้งาน · วิธีใช้. The course tabs (นักเรียน · บทเรียน · ไฟล์คอร์ส) live in admin-course.js and reach this file through window.T1Admin.
+// Single sign-in: the Supabase session uses the same storage key as the course pages (account.js) → the owner logs in once for both.
 (function () {
   const $ = id => document.getElementById(id);
   const MAX_BYTES = 50 * 1024 * 1024;               // storage object limit
@@ -10,9 +12,14 @@
   // sign-upload `files[].path`: 'rel' = path inside the style folder (server stores it at <id>/<path>); 'full' = '<id>/<path>'
   const SIGN_PATH_MODE = 'rel';
   const TOKEN_SS = 'top1_admin_token';
+  const AUTH_KEY = 'top1-course-auth';               // = account.js STORAGE_KEY (course pages)
+  const OLD_AUTH_KEY = 'top1-armory-admin';          // before single sign-in: moved over once so the owner stays logged in
 
   // ---------------------------------------------------------------- state + small utils
   let sb = null, KEYS = [], STYLES = [], view = '', appReady = false, stylesLoaded = false, usageLoaded = false;
+  // course students (course-api admin/students) — shared by the keys tab (who holds which key) and the นักเรียน tab
+  const CS = { list: null, total: 0, err: '' };
+  const COURSE_TABS = {};                            // filled by admin-course.js: { students|lessons|files: { open(), render?(), reset?() } }
   let adminToken = (() => { try { return sessionStorage.getItem(TOKEN_SS) || ''; } catch { return ''; } })();
   const setToken = t => { adminToken = t || ''; try { t ? sessionStorage.setItem(TOKEN_SS, t) : sessionStorage.removeItem(TOKEN_SS); } catch {} };
   const say = (el, text, kind) => { el = typeof el === 'string' ? $(el) : el; el.replaceChildren(kind ? h('span', { class: kind }, text) : text); };
@@ -22,7 +29,8 @@
   const toDateInput = v => { const d = new Date(v); return isNaN(d) ? '' : `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`; };
   const endOfDay = v => new Date(v + 'T23:59:59').toISOString();      // date input (local) → ISO
   const pageUrl = p => new URL(p, location.href).href.split('#')[0];
-  const connectLink = k => pageUrl('connect.html') + '#key=' + encodeURIComponent(k);
+  // login.html?tab=register#key=… opens the register form with the key filled in (login.js drops the hash from the address bar)
+  const registerLink = k => pageUrl('login.html?tab=register') + (k ? '#key=' + encodeURIComponent(k) : '');
   const pubUrl = (id, f) => SUPA_URL ? `${SUPA_URL}/storage/v1/object/public/armory-public/${encodeURIComponent(id)}/${f}` : '';
   function banner(content, kind) { $('banner').replaceChildren(content ? h('div', { class: 'banner' + (kind === 'err' ? ' err' : '') }, content) : ''); }
   function show(v) {
@@ -52,6 +60,40 @@
       if ((e.status === 401 || e.status === 403) && view === 'app') { banner('สิทธิ์หมดอายุหรือถูกเปลี่ยน — กรุณาเข้าสู่ระบบใหม่', 'err'); setTimeout(route, 0); }
       throw e;
     }
+  }
+  // course-api admin routes (นักเรียน · บทเรียน · ไฟล์คอร์ส) — same auth headers. Only a lost session / lost admin right sends the owner
+  // back to login; other 403s are business rules (e.g. protected-admin) and just show their Thai message.
+  const courseUrl = p => FN_BASE + '/course-api/' + String(p).replace(/^\/+/, '');
+  async function courseApi(path, body) {
+    const headers = await authHeaders(), opt = { method: body ? 'POST' : 'GET', headers };
+    if (body) { headers['Content-Type'] = 'application/json'; opt.body = JSON.stringify(body); }
+    try { return await getJSON(courseUrl(path), opt); }
+    catch (e) {
+      const reason = e.data && e.data.reason;
+      if (view === 'app' && (e.status === 401 || reason === 'not-admin' || reason === 'admin-login')) { banner('สิทธิ์หมดอายุหรือถูกเปลี่ยน — กรุณาเข้าสู่ระบบใหม่', 'err'); setTimeout(route, 0); }
+      throw e;
+    }
+  }
+  // any API error → short Thai text (server messages are Thai already; English or empty ones get a Thai fallback)
+  const ERR_TH = { 0: 'เชื่อมต่อเซิร์ฟเวอร์ไม่ได้ — เช็กอินเทอร์เน็ตแล้วลองใหม่', 401: 'สิทธิ์หมดอายุ — กรุณาเข้าสู่ระบบใหม่', 403: 'บัญชีนี้ทำรายการนี้ไม่ได้',
+    404: 'ไม่พบข้อมูลนี้ (อาจถูกลบไปแล้ว) — กดรีเฟรช', 409: 'ข้อมูลซ้ำหรือชนกัน — กดรีเฟรชแล้วลองใหม่', 413: 'ไฟล์ใหญ่เกิน 5 GB', 429: 'ลองถี่เกินไป รอสักครู่แล้วลองใหม่',
+    500: 'เซิร์ฟเวอร์ผิดพลาด ลองใหม่อีกครั้ง' };
+  const hasThai = s => /[฀-๿]/.test(String(s || ''));
+  function errText(e) {
+    const m = String((e && e.message) || '');
+    if (hasThai(m)) return m;
+    const st = e && typeof e.status === 'number' ? e.status : -1;
+    return ERR_TH[st] || (st >= 500 ? ERR_TH[500] : 'ทำรายการไม่สำเร็จ ลองใหม่อีกครั้ง');
+  }
+  // students list → keys tab (bound account per key) + นักเรียน tab
+  function setStudents(list, total) {
+    CS.list = Array.isArray(list) ? list : []; if (total != null) CS.total = +total || 0; CS.err = '';
+    if (KEYS.length) renderKeys();
+    const t = COURSE_TABS.students; if (t && t.render) t.render();
+  }
+  async function loadStudentIndex() {
+    try { const d = await courseApi('admin/students'); setStudents(d.students, d.total); }
+    catch (e) { CS.err = errText(e); if (KEYS.length) renderKeys(); }
   }
 
   // ---------------------------------------------------------------- routing: login → claim → app
@@ -133,7 +175,9 @@
   $('code').addEventListener('keydown', e => { if (e.key === 'Enter') $('bClaim').click(); });
   async function logout() {
     setToken(''); if (sb) await sb.auth.signOut().catch(() => {});
-    KEYS = []; STYLES = []; stylesLoaded = usageLoaded = false; banner(''); show('login');
+    KEYS = []; STYLES = []; stylesLoaded = usageLoaded = false; CS.list = null; CS.total = 0; CS.err = '';
+    Object.values(COURSE_TABS).forEach(t => { try { if (t.reset) t.reset(); } catch {} });
+    banner(''); show('login');
   }
   $('logout').onclick = logout; $('bClaimOut').onclick = logout;
 
@@ -141,7 +185,7 @@
   function enterApp() {
     show('app');
     if (!appReady) { appReady = true; fillGuide(); }
-    loadKeys();
+    loadKeys(); loadStudentIndex();
     const cur = document.querySelector('#tabs .chip.on'); if (cur && cur.dataset.tab !== 'keys') openTab(cur.dataset.tab);
   }
   function openTab(t) {
@@ -149,6 +193,7 @@
     document.querySelectorAll('[data-pane]').forEach(p => { p.hidden = p.dataset.pane !== t; });
     if (t === 'styles' && !stylesLoaded) loadStyles();
     if (t === 'usage' && !usageLoaded) loadUsage();
+    const ct = COURSE_TABS[t]; if (ct && ct.open) ct.open();
   }
   document.querySelectorAll('#tabs .chip').forEach(c => { c.setAttribute('role', 'tab'); c.onclick = () => openTab(c.dataset.tab); });
 
@@ -167,7 +212,12 @@
     last: k.last_used_at ?? k.lastUsedAt ?? null, uses: +(k.use_count ?? k.useCount ?? 0) || 0 });
   const statusOf = k => !k.active ? 'off' : (k.exp && new Date(k.exp) < new Date() ? 'exp' : 'on');
   const ST_LABEL = { on: 'ใช้งาน', off: 'ปิดอยู่', exp: 'หมดอายุ' };
-  const studentMsg = k => `คีย์คลังแสง TOP 1 HollyWood ของคุณ${k.name ? ' (' + k.name + ')' : ''}\n${k.key}\n\nเปิดลิงก์นี้เพื่อเชื่อม Claude (ใส่คีย์ให้แล้ว):\n${connectLink(k.key)}\n\nคีย์นี้ใช้ได้เฉพาะคุณ ห้ามแชร์ให้คนอื่นนะครับ`;
+  const studentMsg = k => `คีย์คอร์ส TOP 1 HollyWood ของคุณ${k.name ? ' (' + k.name + ')' : ''}\n${k.key}\n\n` +
+    `1) ลงทะเบียนเรียน (ใส่คีย์ให้แล้ว ตั้งอีเมลกับรหัสผ่านของคุณเอง):\n${registerLink(k.key)}\n\n` +
+    `2) เข้าเรียน ดาวน์โหลดชุดเริ่มต้น และเชื่อมคลังแสงกับแอป Claude ได้ที่หน้า "คอร์สของฉัน"\n\nคีย์นี้ใช้ได้เฉพาะคุณ ห้ามแชร์ให้คนอื่นนะครับ`;
+  // key id → the course account it is bound to (null = list not loaded yet → unknown)
+  const boundMap = () => CS.list ? new Map(CS.list.filter(s => s && s.key && s.key.id).map(s => [s.key.id, s])) : null;
+  const useOf = (k, bm) => !bm ? '' : bm.has(k.id) ? 'used' : 'free';
   const keyRows = d => (Array.isArray(d) ? d : (d.keys || d.rows || d.created || [])).map(kf);
   const copyBtns = k => [
     h('button', { class: 'btn sm ghost', type: 'button', title: 'คัดลอกคีย์', onclick: () => copy(k.key, 'คัดลอกคีย์แล้ว') }, 'คีย์'),
@@ -180,13 +230,25 @@
     catch (e) { tableMsg('kTable', 'โหลดคีย์ไม่สำเร็จ: ' + e.message, 'err'); }
   }
   function renderKeys() {
-    const q = $('kSearch').value.trim().toLowerCase(), f = $('kFilter').value;
-    const rows = KEYS.filter(k => (!f || statusOf(k) === f) && (!q || (k.name + ' ' + k.note + ' ' + k.key).toLowerCase().includes(q)));
+    const q = $('kSearch').value.trim().toLowerCase(), f = $('kFilter').value, bm = boundMap();
+    if ((f === 'free' || f === 'used') && !bm) {
+      tableMsg('kTable', CS.err ? 'ยังดูไม่ได้ว่าคีย์ไหนถูกใช้แล้ว: ' + CS.err : 'กำลังโหลดรายชื่อนักเรียน…', CS.err ? 'err' : ''); return;
+    }
+    const who = k => { const s = bm && bm.get(k.id); return s ? (s.name || '') + ' ' + (s.email || '') : ''; };
+    const rows = KEYS.filter(k => (!f || (f === 'free' || f === 'used' ? useOf(k, bm) === f : statusOf(k) === f)) &&
+      (!q || (k.name + ' ' + k.note + ' ' + k.key + ' ' + who(k)).toLowerCase().includes(q)));
     const on = KEYS.filter(k => statusOf(k) === 'on').length;
-    $('kCount').textContent = `(${KEYS.length} คีย์ · ใช้งาน ${on})`;
+    const free = bm ? KEYS.filter(k => !bm.has(k.id)).length : null;
+    $('kCount').textContent = `(${KEYS.length} คีย์ · ใช้งาน ${on}${free == null ? '' : ' · ยังไม่ถูกใช้ ' + free})`;
     if (!rows.length) { tableMsg('kTable', KEYS.length ? 'ไม่พบคีย์ที่ตรงกับคำค้น' : 'ยังไม่มีคีย์ — สร้างคีย์แรกด้านบน'); return; }
+    const boundCell = k => {
+      if (!bm) return h('span', { class: 'mini', title: CS.err || '' }, CS.err ? 'โหลดไม่ได้' : '…');
+      const s = bm.get(k.id);
+      if (!s) return h('span', { class: 'st off' }, 'ยังไม่ถูกใช้');
+      return [h('b', null, s.name || '(ไม่มีชื่อ)'), h('div', { class: 'muted' }, s.email || '-'), s.active ? null : h('div', { class: 'mini' }, 'ปิดการเรียนอยู่')];
+    };
     $('kTable').replaceChildren(
-      h('tr', null, ['นักเรียน', 'คีย์', 'สถานะ', 'หมดอายุ', 'ใช้ล่าสุด', 'ครั้ง', ''].map(t => h('th', null, t))),
+      h('tr', null, ['นักเรียน', 'คีย์', 'บัญชีที่ใช้คีย์', 'สถานะ', 'หมดอายุ', 'ใช้ล่าสุด', 'ครั้ง', ''].map(t => h('th', null, t))),
       ...rows.map(k => {
         const st = statusOf(k);
         const sw = h('button', { class: 'sw' + (k.active ? ' on' : ''), type: 'button', role: 'switch', 'aria-checked': k.active ? 'true' : 'false', title: k.active ? 'ปิดคีย์นี้' : 'เปิดคีย์นี้' });
@@ -198,6 +260,7 @@
         return h('tr', null,
           h('td', null, h('b', null, k.name || '-'), k.note ? h('div', { class: 'muted' }, k.note) : null, h('div', { class: 'mini' }, 'สร้าง ' + fdate(k.created))),
           h('td', null, h('span', { class: 'kcode' }, k.key)),
+          h('td', null, boundCell(k)),
           h('td', null, h('div', { class: 'row', style: 'margin:0;flex-wrap:nowrap' }, sw, h('span', { class: 'st ' + st }, ST_LABEL[st]))),
           h('td', { class: 'muted', style: 'white-space:nowrap' }, k.exp ? fdate(k.exp) : 'ไม่หมดอายุ'),
           h('td', { class: 'muted', style: 'white-space:nowrap' }, k.last ? fdate(k.last, true) : 'ยังไม่เคยใช้'),
@@ -207,7 +270,7 @@
             h('button', { class: 'btn sm red', type: 'button', onclick: () => delKey(k) }, 'ลบ'))));
       }));
   }
-  $('kSearch').oninput = renderKeys; $('kFilter').onchange = renderKeys; $('kReload').onclick = loadKeys;
+  $('kSearch').oninput = renderKeys; $('kFilter').onchange = renderKeys; $('kReload').onclick = () => { loadKeys(); loadStudentIndex(); };
 
   $('kCreate').onclick = async () => {
     const name = $('kName').value.trim(); if (!name) { toast('ใส่ชื่อนักเรียนก่อน'); $('kName').focus(); return; }
@@ -257,8 +320,13 @@
     };
   }
   async function delKey(k) {
-    if (!confirm(`ลบคีย์ของ "${k.name || k.key}" ถาวร?\nนักเรียนคนนี้จะเชื่อมคลังแสงไม่ได้อีก (ถ้าแค่พักไว้ ให้ปิดสวิตช์แทน)`)) return;
-    try { await api('keys', { action: 'delete', id: k.id }); toast('ลบคีย์แล้ว'); KEYS = KEYS.filter(x => x !== k); renderKeys(); }
+    const bm = boundMap(), s = bm && bm.get(k.id);
+    const extra = s ? `\n\nคีย์นี้ผูกกับบัญชี ${s.email || s.name || ''} — ลบแล้วนักเรียนคนนี้จะเข้าเรียนไม่ได้จนกว่าจะใส่คีย์ใหม่` : '';
+    if (!confirm(`ลบคีย์ของ "${k.name || k.key}" ถาวร?\nนักเรียนคนนี้จะเชื่อมคลังแสงไม่ได้อีก (ถ้าแค่พักไว้ ให้ปิดสวิตช์แทน)${extra}`)) return;
+    try {
+      await api('keys', { action: 'delete', id: k.id }); toast('ลบคีย์แล้ว'); KEYS = KEYS.filter(x => x !== k);
+      if (s) loadStudentIndex(); else renderKeys();
+    }
     catch (e) { toast('ลบไม่สำเร็จ: ' + e.message); }
   }
 
@@ -509,6 +577,8 @@
   function fillGuide() {
     const fn = FN_BASE || 'https://<ref>.supabase.co/functions/v1';
     $('gGallery').textContent = pageUrl('./'); $('gConn').textContent = pageUrl('connect.html'); $('gMcp').textContent = mcpUrl('');
+    $('gReg').textContent = registerLink(''); $('gCourse').textContent = pageUrl('course.html');
+    $('gCpReg').onclick = () => copy(registerLink(''), 'คัดลอกลิงก์ลงทะเบียนแล้ว');
     $('gConnect').setAttribute('href', 'connect.html');
     const c1 = `curl -X POST "${fn}/armory-api/admin/keys" \\\n  -H "x-admin-token: <โทเคนเว็บคอร์ส>" \\\n  -H "Content-Type: application/json" \\\n  -d '{"action":"create","name":"ชื่อนักเรียน / เลขออเดอร์","note":"จากเว็บคอร์ส"}'`;
     $('gCurl1').textContent = c1;
@@ -519,13 +589,27 @@
 
   // ---------------------------------------------------------------- boot
   if (CFG_READY && SUPA_URL && SUPA_KEY && window.supabase && typeof window.supabase.createClient === 'function') {
-    sb = window.supabase.createClient(SUPA_URL, SUPA_KEY, { auth: { persistSession: true, autoRefreshToken: true, detectSessionInUrl: true, storageKey: 'top1-armory-admin' } });
+    // one-time move of the old admin-only session to the shared key (same supabase-js version → same session format)
+    try {
+      const old = localStorage.getItem(OLD_AUTH_KEY);
+      if (old) { if (!localStorage.getItem(AUTH_KEY)) localStorage.setItem(AUTH_KEY, old); localStorage.removeItem(OLD_AUTH_KEY); }
+    } catch {}
+    // detectSessionInUrl:false — a session is never taken from the address bar here (a planted admin.html#access_token=… link of another
+    // account would otherwise replace the owner's session and lead them to paste the setup code into the wrong account)
+    sb = window.supabase.createClient(SUPA_URL, SUPA_KEY, { auth: { persistSession: true, autoRefreshToken: true, detectSessionInUrl: false, flowType: 'implicit', storageKey: AUTH_KEY } });
     // never call supabase from inside the callback (supabase-js lock) — defer
     sb.auth.onAuthStateChange(ev => {
       if (ev === 'SIGNED_IN' && view !== 'app') setTimeout(route, 0);
       if (ev === 'SIGNED_OUT' && !adminToken && view !== 'login') setTimeout(() => show('login'), 0);
     });
   }
+  // ---------------------------------------------------------------- bridge for admin-course.js (นักเรียน · บทเรียน · ไฟล์คอร์ส)
+  window.T1Admin = {
+    sb: () => sb, courseApi, errText, say, sheet, tableMsg, fdate, toDateInput, pageUrl, registerLink, statusOf,
+    keys: () => KEYS, reloadKeys: loadKeys, keysApi: body => api('keys', body),
+    students: () => CS, setStudents, reloadStudents: loadStudentIndex, tabs: COURSE_TABS,
+  };
+
   setMode('in');
   route();
 })();
