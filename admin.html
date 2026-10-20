@@ -1,0 +1,129 @@
+<!doctype html><html lang="th"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>หลังบ้าน · คลังแสง TOP 1</title>
+<meta name="robots" content="noindex,nofollow">
+<link rel="icon" href="data:,">
+<link href="https://fonts.googleapis.com/css2?family=Anuphan:wght@200..700&family=Inter:wght@300..800&display=swap" rel="stylesheet"><link rel="stylesheet" href="app.css"></head><body>
+<div class="page-bg"></div>
+<div class="top glass"><div class="in"><a class="brand" href="./"><b>TOP 1</b> HOLLYWOOD<small>หลังบ้านคลังแสง</small></a><div class="sp"></div>
+ <span class="who" id="who"></span><button class="btn ghost sm" id="logout" type="button" hidden>ออกจากระบบ</button><a class="btn ghost sm" href="./">ดูหน้าลูกค้า</a></div></div>
+<div class="wrap">
+ <div id="banner"></div>
+
+ <!-- ===== login / sign-up ===== -->
+ <section id="vLogin" hidden><div class="authbox">
+  <div class="hero-s" style="text-align:center"><span class="pill glass"><i></i>OWNER ONLY</span><h1>หลังบ้าน<b class="gb">คลังแสง</b></h1><p class="muted" style="margin:0 auto">ออกคีย์นักเรียน · จัดการสไตล์ · ดูการใช้งาน</p></div>
+  <div class="panel">
+   <div class="seg glass" style="display:flex;margin-bottom:6px"><button class="chip on" id="tIn" type="button" style="flex:1">เข้าสู่ระบบ</button><button class="chip" id="tUp" type="button" style="flex:1">สมัครบัญชีเจ้าของ</button></div>
+   <form id="fAuth" autocomplete="on">
+    <label for="em">อีเมล</label><input type="email" id="em" autocomplete="email" required placeholder="you@example.com">
+    <label for="pw">รหัสผ่าน</label><input type="password" id="pw" autocomplete="current-password" required minlength="6" placeholder="อย่างน้อย 8 ตัว">
+    <div class="row" style="margin-top:16px"><button class="btn" id="bAuth" type="submit" style="flex:1">เข้าสู่ระบบ</button></div>
+    <div id="mAuth" class="muted" style="margin-top:10px" aria-live="polite"></div>
+   </form>
+   <div class="mini" id="upHint" hidden style="margin-top:8px">สมัครครั้งแรก: สร้างบัญชีด้วยอีเมลของคุณ → ยืนยันอีเมล (ถ้าระบบส่งไป) → เข้าสู่ระบบ → ใส่รหัสตั้งค่าเพื่อยืนยันว่าเป็นเจ้าของ</div>
+  </div>
+  <details class="panel" style="padding:16px 22px"><summary class="mini" style="cursor:pointer">เข้าด้วยโทเคนแอดมิน (สำรอง)</summary>
+   <div class="muted" style="margin-top:8px">ใช้โทเคนเดียวกับรหัสตั้งค่า — เก็บไว้เฉพาะแท็บนี้ ปิดแท็บแล้วหายเอง</div>
+   <div class="row"><input type="password" id="tok" autocomplete="off" placeholder="โทเคนแอดมิน" style="flex:1;min-width:180px"><button class="btn sm" id="bTok" type="button">เข้า</button></div>
+   <div id="mTok" class="muted" style="margin-top:6px"></div>
+  </details>
+ </div></section>
+
+ <!-- ===== claim admin ===== -->
+ <section id="vClaim" hidden><div class="authbox">
+  <div class="panel"><h2>ยืนยันสิทธิ์เจ้าของ</h2>
+   <div class="muted">บัญชี <b id="claimEmail"></b> ยังไม่ใช่แอดมิน — ใส่ <b>รหัสตั้งค่า</b> (setup code) ที่ได้ตอนติดตั้งระบบ เพื่อผูกบัญชีนี้เป็นเจ้าของคลังแสง (ทำครั้งเดียว)</div>
+   <label for="code">รหัสตั้งค่า</label><input type="password" id="code" autocomplete="off" placeholder="วางรหัสตั้งค่า">
+   <div class="row" style="margin-top:14px"><button class="btn" id="bClaim" type="button">ยืนยันเป็นเจ้าของ</button><button class="btn ghost" id="bClaimOut" type="button">ใช้บัญชีอื่น</button></div>
+   <div id="mClaim" class="muted" style="margin-top:10px" aria-live="polite"></div>
+  </div>
+ </div></section>
+
+ <!-- ===== back office ===== -->
+ <section id="vApp" hidden>
+  <div class="tabs glass" role="tablist" id="tabs">
+   <button class="chip on" type="button" data-tab="keys">คีย์นักเรียน</button><button class="chip" type="button" data-tab="styles">สไตล์</button><button class="chip" type="button" data-tab="usage">การใช้งาน</button><button class="chip" type="button" data-tab="guide">วิธีใช้</button>
+  </div>
+
+  <!-- keys -->
+  <div data-pane="keys">
+   <div class="grid2">
+    <div class="panel"><h2>สร้างคีย์ใหม่</h2><div class="muted">ออกคีย์ให้นักเรียนที่จ่ายแล้ว — นักเรียนใช้คีย์นี้เชื่อม Claude กับคลังแสง (ปิด/ลบได้ทุกเมื่อ)</div>
+     <label for="kName">ชื่อนักเรียน / อีเมล / เลขออเดอร์</label><input type="text" id="kName" maxlength="120" placeholder="เช่น สมชาย · ออเดอร์ #1024">
+     <label for="kNote">โน้ต (ไม่ใส่ก็ได้)</label><input type="text" id="kNote" maxlength="300" placeholder="เช่น รุ่น 3 · จ่ายผ่านโอน">
+     <label for="kExp">หมดอายุ (ไม่ใส่ = ไม่หมดอายุ)</label><input type="date" id="kExp">
+     <div class="row" style="margin-top:14px"><button class="btn" id="kCreate" type="button">สร้างคีย์</button></div>
+     <div id="kNew"></div>
+    </div>
+    <div class="panel"><h2>สร้างหลายคีย์</h2><div class="muted">วางรายชื่อ บรรทัดละ 1 คน (สูงสุด 200)</div>
+     <label for="kBulk">รายชื่อ</label><textarea id="kBulk" placeholder="สมชาย&#10;สมหญิง&#10;ออเดอร์ #1025" style="min-height:150px"></textarea>
+     <div class="row" style="margin-top:12px"><button class="btn" id="kBulkGo" type="button">สร้างทั้งหมด</button><span class="mini" id="kBulkN"></span></div>
+     <div id="kBulkOut"></div>
+    </div>
+   </div>
+   <div class="panel"><div class="row" style="justify-content:space-between;margin-top:0"><h2 style="margin:0">คีย์ทั้งหมด <span class="muted" id="kCount"></span></h2><button class="btn sm ghost" id="kReload" type="button">รีเฟรช</button></div>
+    <div class="row"><input type="search" id="kSearch" placeholder="ค้นหาชื่อ โน้ต หรือคีย์" style="flex:1;min-width:180px">
+     <select id="kFilter" style="width:auto;min-width:140px"><option value="">ทุกสถานะ</option><option value="on">ใช้งาน</option><option value="off">ปิดอยู่</option><option value="exp">หมดอายุ</option></select></div>
+    <div class="tw" style="margin-top:10px"><table id="kTable"></table></div>
+   </div>
+  </div>
+
+  <!-- styles -->
+  <div data-pane="styles" hidden>
+   <div class="panel"><h2>อัปโหลดสไตล์ใหม่</h2>
+    <div class="muted">เลือก <b>โฟลเดอร์แพ็ค</b> ที่มี pack.json (เช่น packs/serum-quiz-ab) — ระบบอัปทุกไฟล์ขึ้นคลังแล้วลงทะเบียนให้อัตโนมัติ · รหัสซ้ำกับของเดิม = อัปเดตสไตล์นั้น · เลือกโฟลเดอร์ packs ทั้งก้อนก็ได้ (อัปทีละแพ็ค)</div>
+    <label class="drop" for="upDir" style="margin-top:14px"><b>เลือกโฟลเดอร์แพ็ค</b><span class="mini">ไฟล์ละไม่เกิน 50 MB (คลิปใหญ่กว่านั้นต้องย่อก่อน)</span></label>
+    <input type="file" id="upDir" class="vh" webkitdirectory directory multiple>
+    <div id="upBox" hidden>
+     <div class="row" style="justify-content:space-between"><b id="upTitle" style="font:700 15px Anuphan"></b><button class="btn sm red" id="upStop" type="button">หยุด</button></div>
+     <div class="prog"><i id="upBar"></i></div><div class="mini" id="upStat"></div>
+     <div class="log" id="upLog"></div>
+    </div>
+   </div>
+   <div class="panel"><div class="row" style="justify-content:space-between;margin-top:0"><h2 style="margin:0">สไตล์ในคลัง <span class="muted" id="sCount"></span></h2><button class="btn sm ghost" id="sReload" type="button">รีเฟรช</button></div>
+    <div class="muted">สวิตช์ = แสดงในหน้าคลัง · ลำดับ = เลขน้อยขึ้นก่อน (เท่ากันเรียงตามชื่อ)</div>
+    <div class="tw" style="margin-top:10px"><table id="sTable"></table></div>
+   </div>
+  </div>
+
+  <!-- usage -->
+  <div data-pane="usage" hidden>
+   <div class="panel"><div class="row" style="justify-content:space-between;margin-top:0"><h2 style="margin:0">การใช้งาน</h2>
+     <div class="row" style="margin:0"><select id="uDays" style="width:auto"><option value="7">7 วันล่าสุด</option><option value="30">30 วันล่าสุด</option><option value="90">90 วันล่าสุด</option></select><button class="btn sm ghost" id="uReload" type="button">รีเฟรช</button></div></div>
+    <div class="muted">นับทุกครั้งที่ Claude ของนักเรียนเรียกเครื่องมือในคลังแสง</div>
+    <div id="uOut" style="margin-top:12px"></div>
+   </div>
+  </div>
+
+  <!-- guide -->
+  <div data-pane="guide" hidden>
+   <div class="panel"><h2>วิธีใช้หลังบ้าน</h2>
+    <ol class="ol">
+     <li><b>ออกคีย์</b> — แท็บ “คีย์นักเรียน” ใส่ชื่อ → สร้างคีย์ → กด <b>ข้อความ</b> เพื่อคัดลอกข้อความพร้อมส่งให้นักเรียน (มีคีย์ + ลิงก์หน้าเชื่อม)</li>
+     <li><b>นักเรียนเชื่อมเอง</b> — นักเรียนเปิดหน้า <a class="linkbtn" id="gConnect" href="connect.html" target="_blank" rel="noopener">connect.html</a> ใส่คีย์ แล้วทำตาม 3 ขั้น (claude.ai หรือ Claude Code)</li>
+     <li><b>ระงับคีย์</b> — ปิดสวิตช์ (เปิดคืนได้) · <b>ลบ</b> = ลบถาวร · ตั้งวันหมดอายุได้ที่ปุ่ม แก้ไข</li>
+     <li><b>เพิ่มสไตล์</b> — แท็บ “สไตล์” → เลือกโฟลเดอร์แพ็ค (pack.json, ref.mp4, thumb.jpg, sheet.jpg, frames/, playbook.md, beats.json, transcript.json, audio.json, template/, examples/) → รอจนขึ้น ✓ · ไฟล์เกิน 50 MB ต้องย่อก่อน หรือใช้เครื่องมืออัปโหลดในเครื่อง</li>
+     <li><b>ซ่อน/เรียงสไตล์</b> — สวิตช์ซ่อนจากหน้าคลังทันที (ไฟล์ยังอยู่) · ช่องลำดับ: เลขน้อยขึ้นก่อน</li>
+     <li><b>ดูการใช้งาน</b> — แท็บ “การใช้งาน” ดูว่าใคร ใช้เครื่องมือไหน กับสไตล์ไหน กี่ครั้ง</li>
+    </ol>
+   </div>
+   <div class="panel"><h2>ลิงก์สำคัญ</h2>
+    <div class="muted">หน้าคลัง (ลูกค้า)</div><div class="code" id="gGallery"></div>
+    <div class="muted">หน้าเชื่อม Claude (นักเรียน)</div><div class="code" id="gConn"></div>
+    <div class="muted">ลิงก์ MCP ของนักเรียน (แต่ละคนใช้คีย์ตัวเอง)</div><div class="code" id="gMcp"></div>
+   </div>
+   <div class="panel"><h2>เชื่อมเว็บคอร์ส (ออกคีย์อัตโนมัติเมื่อมีคนจ่ายเงิน)</h2>
+    <div class="muted">ให้เซิร์ฟเวอร์ของเว็บคอร์สเรียก API นี้ด้วยหัว <span class="kbd">x-admin-token</span> — <b>ห้ามใส่โทเคนในหน้าเว็บหรือโค้ดฝั่งเบราว์เซอร์</b> เก็บไว้ฝั่งเซิร์ฟเวอร์เท่านั้น</div>
+    <label>สร้างคีย์</label><div class="code" id="gCurl1"></div>
+    <div class="muted">ตอบกลับ: <span class="kbd">{"key": {"id": "…", "key": "T1-XXXX-XXXX-XXXX", "name": "…", "active": true}}</span></div>
+    <label>ปิดคีย์ (เช่น ขอคืนเงิน)</label><div class="code" id="gCurl2"></div>
+    <label>ดูรายการคีย์</label><div class="code" id="gCurl3"></div>
+    <div class="row"><button class="btn sm ghost" id="gCp1" type="button">คัดลอกคำสั่งสร้างคีย์</button></div>
+   </div>
+  </div>
+ </section>
+</div>
+<script src="config.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.min.js"></script>
+<script src="app.js"></script><script src="admin.js"></script>
+</body></html>
